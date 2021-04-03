@@ -9,7 +9,7 @@ import {
 } from "carbon-components-react";
 import { Link } from "gatsby";
 
-const AppHeader = () => (
+const AppHeader = ({activeCamera}) => (
   <HeaderContainer
     render={({ isSideNavExpanded, onClickSideNavExpand }) => (
       <Header aria-label="NDI Camera Control">
@@ -18,7 +18,7 @@ const AppHeader = () => (
           Camera Control
         </HeaderName>
         <HeaderNavigation aria-label="Camera Control">
-          <HeaderMenuItem element={Link} to="/cameras">Camera Selection</HeaderMenuItem>
+          <HeaderMenuItem element={Link} to="/cameras">Active camera: {activeCamera}</HeaderMenuItem>
         </HeaderNavigation>
       </Header>
     )}

@@ -2,13 +2,12 @@ import React from "react";
 import AppHeader from "./header";
 import { Content } from 'carbon-components-react';
 
-export default function Layout({ children }) {
-  console.log(children);
+export default function Layout(props) {
   return (
     <div>
-      <AppHeader></AppHeader>
-      <Content>
-        {children}
+      <AppHeader activeCamera={props.activeCamera}></AppHeader>
+      <Content style={{background: 'unset', paddingLeft: 0}}>
+        {props.children}
       </Content>
     </div>
   );
