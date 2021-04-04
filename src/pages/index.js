@@ -73,7 +73,6 @@ class IndexPage extends React.Component {
       await setWbModeAuto();
     }
 
-    console.log(camera.whiteBalance.currentWhiteBalanceMode);
     this.setState({
       activeCamera: camera,
       cameraName: camera.properties.localizedName,
@@ -128,6 +127,10 @@ class IndexPage extends React.Component {
   async setWbLockGrey() {
     await setWbModeLocked();
     await setWbLockGrey();
+
+    setTimeout(() => {
+      this.updateTempTint();
+    }, 500); // arbitary number, it takes some time before the new temperature and tint values are ready
   }
 
   async setTempTint(temp, tint) {
@@ -262,7 +265,9 @@ class IndexPage extends React.Component {
                 <FormLabel>
                   <Tooltip triggerText="White balance">
                     You can choose auto white balance or customise the
-                    temperature and tint, and lock to a grey reference card in 'custom' mode. If "Custom" is greyed out, choose another camera.
+                    temperature and tint, and lock to a grey reference card in
+                    'custom' mode. If "Custom" is greyed out, choose another
+                    camera.
                   </Tooltip>
                 </FormLabel>
                 <div style={{ marginBottom: "0.5rem" }}></div>
@@ -285,7 +290,10 @@ class IndexPage extends React.Component {
                   <Switch
                     name="custom-white-balance-select"
                     text="Custom"
-                    disabled={!this.state.whiteBalance.supportsCustomGain || !this.state.whiteBalance.supportsGrey}
+                    disabled={
+                      !this.state.whiteBalance.supportsCustomGain ||
+                      !this.state.whiteBalance.supportsGrey
+                    }
                   />
                 </ContentSwitcher>
                 <div style={{ marginBottom: "0.5rem" }}></div>
@@ -321,10 +329,17 @@ class IndexPage extends React.Component {
                   }}
                 />
                 <div style={{ marginBottom: "0.5rem" }}></div>
-                <Button 
-                disabled={!this.state.whiteBalance.supportsGrey || this.state.wb_isAuto} 
-                onClick={this.setWbLockGrey}
-                >Lock grey</Button>
+                <Button
+                  disabled={
+                    !this.state.whiteBalance.supportsGrey ||
+                    this.state.wb_isAuto
+                  }
+                  onClick={() => {
+                    this.setWbLockGrey();
+                  }}
+                >
+                  Lock grey
+                </Button>
                 <div style={{ marginBottom: "1rem" }}></div>
                 <FormLabel>
                   <Tooltip triggerText="Interactive focus">
