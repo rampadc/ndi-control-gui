@@ -144,3 +144,68 @@ export async function switchCamera(uniqueID) {
         throw new Error('Cannot zoom');
     }   
 }
+
+export async function setWbModeLocked() {
+    try {
+        let response = await fetch(`${baseUrl}/camera/white-balance/mode/locked`);
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+            return true;
+        }
+    } catch(error) {
+        throw new Error('Cannot get lock white balance mode')
+    }
+}
+
+export async function setWbModeAuto() {
+    try {
+        let response = await fetch(`${baseUrl}/camera/white-balance/mode/auto`);
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+            return true;
+        }
+    } catch(error) {
+        throw new Error('Cannot get switch to auto white balance')
+    }
+}
+
+export async function setWbTempTint(temperature, tint) {
+    let form = new URLSearchParams();
+    form.append('temperature', parseFloat(temperature));
+    form.append('tint', parseFloat(tint));
+
+    try {
+        let response = await fetch(`${baseUrl}/camera/white-balance/temp-tint`, {
+            method: 'POST',
+            body: form
+        });
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+            return true;
+        }
+    } catch(error) {
+        console.error(error);
+        // throw new Error('Cannot set temp/tint');
+    }   
+}
+
+export async function setWbLockGrey() {
+    try {
+        let response = await fetch(`${baseUrl}/camera/white-balance/grey`);
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+            return true;
+        }
+    } catch(error) {
+        console.error(error);
+        
+    }
+}

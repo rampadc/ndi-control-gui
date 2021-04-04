@@ -29,6 +29,10 @@ import {
   getActiveCamera,
   getTempTint,
   setExposureBias,
+  setWbModeAuto,
+  setWbLockGrey,
+  setWbModeLocked,
+  setWbTempTint,
   setZoom,
   startNDI,
   stopNDI,
@@ -42,13 +46,13 @@ class IndexPage extends React.Component {
     exposure: { min: -8, max: 8, current: 0 },
     whiteBalance: {
       supportsAuto: true,
-      supportsLocked: true,
+      supportsCustomGain: true,
       minTemp: 3000,
       maxTemp: 8000,
       minTint: -150,
       maxTint: 150,
     },
-    isCurrentWbAuto: true,
+    wb_isAuto: true,
     wb_currentTemp: 3000,
     wb_currentTint: -150,
     cameraName: "",
@@ -59,7 +63,17 @@ class IndexPage extends React.Component {
     let camera = await getActiveCamera();
     let wbTempTint = await getTempTint();
 
-    console.log(camera);
+    if (
+      // If current white balance is not continuous auto AND custom gains cannot be made AND grey white balance is not supported
+      // then change the white balance mode is continuous auto
+      camera.whiteBalance.currentWhiteBalanceMode !== "ContinuousAuto" &&
+      !camera.whiteBalance.isCustomGainsSupportedInLockedMode &&
+      !camera.whiteBalance.isGreyWhiteBalanceSupported
+    ) {
+      await setWbModeAuto();
+    }
+
+    console.log(camera.whiteBalance.currentWhiteBalanceMode);
     this.setState({
       activeCamera: camera,
       cameraName: camera.properties.localizedName,
@@ -75,16 +89,21 @@ class IndexPage extends React.Component {
       },
       whiteBalance: {
         supportsAuto: camera.whiteBalance.isContinuousWhiteBalanceSupported,
-        supportsLocked: camera.whiteBalance.isLockedWhiteBalanceSupported,
+        supportsCustomGain:
+          camera.whiteBalance.isLockedWhiteBalanceSupported &&
+          camera.whiteBalance.isCustomGainsSupportedInLockedMode,
+        supportsGrey:
+          camera.whiteBalance.isLockedWhiteBalanceSupported &&
+          camera.whiteBalance.isGreyWhiteBalanceSupported,
         minTemp: camera.whiteBalance.minTemp,
         maxTemp: camera.whiteBalance.maxTemp,
         minTint: camera.whiteBalance.minTint,
         maxTint: camera.whiteBalance.maxTint,
-        isCurrentAuto:
-          camera.whiteBalance.currentWhiteBalanceMode === "ContinuousAuto",
       },
       wb_currentTemp: Math.round(wbTempTint.temperature),
       wb_currentTint: Math.round(wbTempTint.tint),
+      wb_isAuto:
+        camera.whiteBalance.currentWhiteBalanceMode === "ContinuousAuto",
     });
   }
 
@@ -94,6 +113,27 @@ class IndexPage extends React.Component {
       wb_currentTemp: Math.round(wbTempTint.temperature),
       wb_currentTint: Math.round(wbTempTint.tint),
     });
+  }
+
+  async setWbModeCustom() {
+    await setWbModeLocked();
+    this.setState({ wb_isAuto: false });
+  }
+
+  async setWbModeAuto() {
+    await setWbModeAuto();
+    this.setState({ wb_isAuto: true });
+  }
+
+  async setWbLockGrey() {
+    await setWbModeLocked();
+    await setWbLockGrey();
+  }
+
+  async setTempTint(temp, tint) {
+    if (!this.state.wb_isAuto && this.state.whiteBalance.supportsCustomGain) {
+      await setWbTempTint(temp, tint);
+    }
   }
 
   render() {
@@ -186,9 +226,9 @@ class IndexPage extends React.Component {
                       this.setState({ isNDISending: true });
                     }
                   }}
-                  kind={this.state.isNDISending ? 'danger' : 'primary'}
+                  kind={this.state.isNDISending ? "danger" : "primary"}
                 >
-                  {this.state.isNDISending ? 'Stop' : 'Start'}
+                  {this.state.isNDISending ? "Stop" : "Start"}
                 </Button>
               </Form>
             </Column>
@@ -222,17 +262,18 @@ class IndexPage extends React.Component {
                 <FormLabel>
                   <Tooltip triggerText="White balance">
                     You can choose auto white balance or customise the
-                    temperature and tint in 'locked' mode.
+                    temperature and tint, and lock to a grey reference card in 'custom' mode. If "Custom" is greyed out, choose another camera.
                   </Tooltip>
                 </FormLabel>
                 <div style={{ marginBottom: "0.5rem" }}></div>
                 <ContentSwitcher
+                  selectedIndex={this.state.wb_isAuto ? 0 : 1}
                   onChange={({ name }) => {
-                    if (name === "locked-white-balance-select")
-                      this.setState({ isCurrentWbAuto: false });
-                    else {
-                      this.setState({ isCurrentWbAuto: true });
-                      this.updateTempTint();
+                    this.updateTempTint();
+                    if (name === "custom-white-balance-select") {
+                      this.setWbModeCustom();
+                    } else if (name === "auto-white-balance-select") {
+                      this.setWbModeAuto();
                     }
                   }}
                 >
@@ -242,9 +283,9 @@ class IndexPage extends React.Component {
                     disabled={!this.state.whiteBalance.supportsAuto}
                   />
                   <Switch
-                    name="locked-white-balance-select"
-                    text="Locked white balance"
-                    disabled={!this.state.whiteBalance.supportsLocked}
+                    name="custom-white-balance-select"
+                    text="Custom"
+                    disabled={!this.state.whiteBalance.supportsCustomGain || !this.state.whiteBalance.supportsGrey}
                   />
                 </ContentSwitcher>
                 <div style={{ marginBottom: "0.5rem" }}></div>
@@ -255,7 +296,13 @@ class IndexPage extends React.Component {
                   max={this.state.whiteBalance.maxTemp}
                   step={1}
                   stepMultiplier={10}
-                  disabled={this.state.isCurrentWbAuto}
+                  disabled={
+                    this.state.wb_isAuto ||
+                    !this.state.whiteBalance.supportsCustomGain
+                  }
+                  onChange={({ value }) => {
+                    this.setTempTint(value, this.state.wb_currentTint);
+                  }}
                 />
                 <div style={{ marginBottom: "0.5rem" }}></div>
                 <Slider
@@ -265,8 +312,19 @@ class IndexPage extends React.Component {
                   max={this.state.whiteBalance.maxTint}
                   step={1}
                   stepMultiplier={10}
-                  disabled={this.state.isCurrentWbAuto}
+                  disabled={
+                    this.state.wb_isAuto ||
+                    !this.state.whiteBalance.supportsCustomGain
+                  }
+                  onChange={({ value }) => {
+                    this.setTempTint(this.state.wb_currentTemp, value);
+                  }}
                 />
+                <div style={{ marginBottom: "0.5rem" }}></div>
+                <Button 
+                disabled={!this.state.whiteBalance.supportsGrey || this.state.wb_isAuto} 
+                onClick={this.setWbLockGrey}
+                >Lock grey</Button>
                 <div style={{ marginBottom: "1rem" }}></div>
                 <FormLabel>
                   <Tooltip triggerText="Interactive focus">
@@ -274,7 +332,7 @@ class IndexPage extends React.Component {
                     temperature and tint in 'locked' mode.
                   </Tooltip>
                 </FormLabel>
-                <ContentSwitcher onChange={() => {}} disabled>
+                <ContentSwitcher onChange={console.log} disabled>
                   <Switch name="auto-focus-select" text="Auto focus" disabled />
                   <Switch
                     name="locked-focus-select"
