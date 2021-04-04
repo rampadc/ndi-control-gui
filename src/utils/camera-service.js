@@ -125,3 +125,22 @@ export async function stopNDI() {
         throw new Error('Cannot get list of cameras')
     }
 }
+
+export async function switchCamera(uniqueID) {
+    let form = new URLSearchParams();
+    form.append('uniqueID', uniqueID);
+    try {
+        let response = await fetch(`${baseUrl}/cameras/select`, {
+            method: 'POST',
+            body: form
+        });
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+            return true;
+        }
+    } catch(error) {
+        throw new Error('Cannot zoom');
+    }   
+}
