@@ -4,13 +4,18 @@ import {
   Column,
   FormGroup,
   Grid,
+  Loading,
   RadioButtonGroup,
   Row,
 } from "carbon-components-react";
 import { RadioButton } from "carbon-components-react/lib/components/radiobutton/radiobutton";
 import React from "react";
 import Layout from "../components/layout";
-import { getActiveCamera, getAllCameras, switchCamera } from "../utils/camera-service";
+import {
+  getActiveCamera,
+  getAllCameras,
+  switchCamera,
+} from "../utils/camera-service";
 import * as _ from "lodash";
 
 class CamerasPage extends React.Component {
@@ -18,32 +23,43 @@ class CamerasPage extends React.Component {
     cameras: [],
     cameraName: "",
     activeCameraUniqueID: "",
-    previewCameraUniqueID: ""
+    previewCameraUniqueID: "",
+    isSwitchingCamera: false,
   };
 
   async componentDidMount() {
     let cameras = await getAllCameras();
-    this.setState({cameras: cameras});
+    this.setState({ cameras: cameras });
 
     let active = await getActiveCamera();
     this.setState({
       activeCameraUniqueID: active.properties.uniqueID,
       previewCameraUniqueID: active.properties.uniqueID,
-      cameraName: active.properties.localizedName
+      cameraName: active.properties.localizedName,
     });
   }
 
   preformatCameraJson(uniqueID) {
-    let cameraHtml = JSON.stringify(_.find(this.state.cameras, (c) => {
-      return c.properties.uniqueID === uniqueID;
-    }), null, 2);
+    let cameraHtml = JSON.stringify(
+      _.find(this.state.cameras, (c) => {
+        return c.properties.uniqueID === uniqueID;
+      }),
+      null,
+      2
+    );
     return cameraHtml;
   }
 
-  switchCamera() {
-    switchCamera(this.state.previewCameraUniqueID);
+  async switchCamera() {
+    this.setState({ isSwitchingCamera: true });
+    await switchCamera(this.state.previewCameraUniqueID);
+    this.setState({ isSwitchingCamera: false });
+
+    let active = _.find(this.state.cameras, (c) => {
+      return c.properties.uniqueID === this.state.previewCameraUniqueID;
+    });
     this.setState({
-      activeCameraUniqueID: this.state.previewCameraUniqueID
+      cameraName: active.properties.localizedName,
     });
   }
 
@@ -64,7 +80,7 @@ class CamerasPage extends React.Component {
                   valueSelected={this.state.activeCameraUniqueID}
                   onChange={(value) => {
                     this.preformatCameraJson(value);
-                    this.setState({previewCameraUniqueID: value});
+                    this.setState({ previewCameraUniqueID: value });
                   }}
                 >
                   {this.state.cameras.map((camera) => (
@@ -77,12 +93,26 @@ class CamerasPage extends React.Component {
                   ))}
                 </RadioButtonGroup>
               </FormGroup>
-              <Button onClick={() => {
-                this.switchCamera();
-              }}>Switch</Button>
+              <Button
+                onClick={() => {
+                  this.switchCamera();
+                }}
+                disabled={this.state.isSwitchingCamera}
+              >
+                <Loading
+                  description="Switching camera..."
+                  withOverlay={false}
+                  small={true}
+                  hidden={!this.state.isSwitchingCamera}
+                  style={{ marginRight: "1rem" }}
+                />
+                Switch
+              </Button>
             </Column>
             <Column lg={12}>
-              <CodeSnippet type="multi" showMoreText>{this.preformatCameraJson(this.state.previewCameraUniqueID)}</CodeSnippet>
+              <CodeSnippet type="multi" showMoreText>
+                {this.preformatCameraJson(this.state.previewCameraUniqueID)}
+              </CodeSnippet>
             </Column>
           </Row>
         </Grid>
