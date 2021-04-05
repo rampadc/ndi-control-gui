@@ -37,6 +37,9 @@ import {
   startNDI,
   stopNDI,
 } from "../utils/camera-service";
+// import Webcam from "react-webcam";
+import WebcamCapture from "../components/webcam-capture";
+import Webcam from "react-webcam";
 
 // markup
 class IndexPage extends React.Component {
@@ -237,7 +240,6 @@ class IndexPage extends React.Component {
             </Column>
             <Column md={3} lg={5}>
               <h4 style={{ marginBottom: "0.5rem" }}>Camera Control</h4>
-              <FormGroup legendText="Configure camera settings">
                 <Slider
                   labelText="Zoom"
                   value={this.state.zoom.current}
@@ -355,10 +357,10 @@ class IndexPage extends React.Component {
                     disabled
                   />
                 </ContentSwitcher>
-              </FormGroup>
             </Column>
             <Column md={3} lg={7}>
               <h4 style={{ marginBottom: "0.5rem" }}>Preview</h4>
+              <WebcamCapture/>
             </Column>
           </Row>
         </Grid>
