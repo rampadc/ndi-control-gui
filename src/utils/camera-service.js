@@ -205,7 +205,21 @@ export async function setWbLockGrey() {
             return true;
         }
     } catch(error) {
-        console.error(error);
-        
+        console.error(error); 
+    }
+}
+
+export async function getNDIStatus() {
+    try {
+        let response = await fetch(`${baseUrl}/ndi/status`);
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+          let hasStarted = await response.json();
+          return hasStarted.started;
+        }
+    } catch(error) {
+        console.error(error); 
     }
 }

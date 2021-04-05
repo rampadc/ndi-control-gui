@@ -8,6 +8,7 @@ import {
   FormGroup,
   FormLabel,
   Grid,
+  Loading,
   Row,
   Select,
   SelectItem,
@@ -36,10 +37,10 @@ import {
   setZoom,
   startNDI,
   stopNDI,
+  getNDIStatus,
 } from "../utils/camera-service";
 // import Webcam from "react-webcam";
 import WebcamCapture from "../components/webcam-capture";
-import Webcam from "react-webcam";
 
 // markup
 class IndexPage extends React.Component {
@@ -60,9 +61,14 @@ class IndexPage extends React.Component {
     wb_currentTint: -150,
     cameraName: "",
     isNDISending: false,
+    waitingForNdiStateChange: false
   };
 
   async componentDidMount() {
+    let hasNdiStarted = await getNDIStatus();
+    this.setState({
+      isNDISending: hasNdiStarted
+    });
     let camera = await getActiveCamera();
     let wbTempTint = await getTempTint();
 
@@ -224,6 +230,7 @@ class IndexPage extends React.Component {
                 </FormGroup>
                 <Button
                   onClick={async () => {
+                    this.setState({waitingForNdiStateChange: true});
                     if (this.state.isNDISending) {
                       await stopNDI();
                       this.setState({ isNDISending: false });
@@ -231,9 +238,18 @@ class IndexPage extends React.Component {
                       await startNDI();
                       this.setState({ isNDISending: true });
                     }
+                    this.setState({waitingForNdiStateChange: false})
                   }}
                   kind={this.state.isNDISending ? "danger" : "primary"}
+                  disabled={this.state.waitingForNdiStateChange}
                 >
+                  <Loading
+                  description="Configuring NDI"
+                  withOverlay={false}
+                  small={true}
+                  hidden={!this.state.waitingForNdiStateChange}
+                  style={{ marginRight: "1rem" }}
+                />
                   {this.state.isNDISending ? "Stop" : "Start"}
                 </Button>
               </Form>
