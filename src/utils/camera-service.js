@@ -223,3 +223,24 @@ export async function getNDIStatus() {
         console.error(error); 
     }
 }
+
+export async function highlight(x, y) {
+    let form = new URLSearchParams();
+    form.append('x', x);
+    form.append('y', y);
+
+    try {
+        let response = await fetch(`${baseUrl}/camera/focus`, {
+            method: 'POST',
+            body: form
+        });
+        if (response.status !== 200) {
+            handleErrors(response);
+            return false;
+        } else {
+            return true;
+        }
+    } catch(error) {
+        console.error(error);
+    }   
+}

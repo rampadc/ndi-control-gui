@@ -61,7 +61,8 @@ class IndexPage extends React.Component {
     wb_currentTint: -150,
     cameraName: "",
     isNDISending: false,
-    waitingForNdiStateChange: false
+    waitingForNdiStateChange: false,
+    poiHighlightSupported: false
   };
 
   async componentDidMount() {
@@ -112,6 +113,7 @@ class IndexPage extends React.Component {
       wb_currentTint: Math.round(wbTempTint.tint),
       wb_isAuto:
         camera.whiteBalance.currentWhiteBalanceMode === "ContinuousAuto",
+      poiHighlightSupported: camera.autoFocus.isFocusPointOfInterestSupported || camera.exposure.isExposurePointOfInterestSupported
     });
   }
 
@@ -230,7 +232,7 @@ class IndexPage extends React.Component {
                 </FormGroup>
                 <Button
                   onClick={async () => {
-                    this.setState({waitingForNdiStateChange: true});
+                    this.setState({ waitingForNdiStateChange: true });
                     if (this.state.isNDISending) {
                       await stopNDI();
                       this.setState({ isNDISending: false });
@@ -238,145 +240,140 @@ class IndexPage extends React.Component {
                       await startNDI();
                       this.setState({ isNDISending: true });
                     }
-                    this.setState({waitingForNdiStateChange: false})
+                    this.setState({ waitingForNdiStateChange: false });
                   }}
                   kind={this.state.isNDISending ? "danger" : "primary"}
                   disabled={this.state.waitingForNdiStateChange}
                 >
                   <Loading
-                  description="Configuring NDI"
-                  withOverlay={false}
-                  small={true}
-                  hidden={!this.state.waitingForNdiStateChange}
-                  style={{ marginRight: "1rem" }}
-                />
+                    description="Configuring NDI"
+                    withOverlay={false}
+                    small={true}
+                    hidden={!this.state.waitingForNdiStateChange}
+                    style={{ marginRight: "1rem" }}
+                  />
                   {this.state.isNDISending ? "Stop" : "Start"}
                 </Button>
               </Form>
             </Column>
             <Column md={3} lg={5}>
               <h4 style={{ marginBottom: "0.5rem" }}>Camera Control</h4>
-                <Slider
-                  labelText="Zoom"
-                  value={this.state.zoom.current}
-                  min={this.state.zoom.min}
-                  max={this.state.zoom.max}
-                  step={0.1}
-                  stepMultiplier={1}
-                  onChange={({ value }) => {
-                    setZoom(value);
-                  }}
-                />
-                <div style={{ marginBottom: "0.5rem" }}></div>
-                <Slider
-                  labelText="Exposure bias"
-                  value={this.state.exposure.current}
-                  min={this.state.exposure.min}
-                  max={this.state.exposure.max}
-                  step={0.1}
-                  stepMultiplier={1}
-                  onChange={({ value }) => {
-                    setExposureBias(value);
-                  }}
-                />
-                <div style={{ marginBottom: "1rem" }}></div>
-                <FormLabel>
-                  <Tooltip triggerText="White balance">
-                    You can choose auto white balance or customise the
-                    temperature and tint, and lock to a grey reference card in
-                    'custom' mode. If "Custom" is greyed out, choose another
-                    camera.
-                  </Tooltip>
-                </FormLabel>
-                <div style={{ marginBottom: "0.5rem" }}></div>
-                <ContentSwitcher
-                  selectedIndex={this.state.wb_isAuto ? 0 : 1}
-                  onChange={({ name }) => {
-                    this.updateTempTint();
-                    if (name === "custom-white-balance-select") {
-                      this.setWbModeCustom();
-                    } else if (name === "auto-white-balance-select") {
-                      this.setWbModeAuto();
-                    }
-                  }}
-                >
-                  <Switch
-                    name="auto-white-balance-select"
-                    text="Auto white balance"
-                    disabled={!this.state.whiteBalance.supportsAuto}
-                  />
-                  <Switch
-                    name="custom-white-balance-select"
-                    text="Custom"
-                    disabled={
-                      !this.state.whiteBalance.supportsCustomGain ||
-                      !this.state.whiteBalance.supportsGrey
-                    }
-                  />
-                </ContentSwitcher>
-                <div style={{ marginBottom: "0.5rem" }}></div>
-                <Slider
-                  labelText="White balance temperature"
-                  value={this.state.wb_currentTemp}
-                  min={this.state.whiteBalance.minTemp}
-                  max={this.state.whiteBalance.maxTemp}
-                  step={1}
-                  stepMultiplier={10}
-                  disabled={
-                    this.state.wb_isAuto ||
-                    !this.state.whiteBalance.supportsCustomGain
+              <Slider
+                labelText="Zoom"
+                value={this.state.zoom.current}
+                min={this.state.zoom.min}
+                max={this.state.zoom.max}
+                step={0.1}
+                stepMultiplier={1}
+                onChange={({ value }) => {
+                  setZoom(value);
+                }}
+              />
+              <div style={{ marginBottom: "0.5rem" }}></div>
+              <Slider
+                labelText="Exposure bias"
+                value={this.state.exposure.current}
+                min={this.state.exposure.min}
+                max={this.state.exposure.max}
+                step={0.1}
+                stepMultiplier={1}
+                onChange={({ value }) => {
+                  setExposureBias(value);
+                }}
+              />
+              <div style={{ marginBottom: "1rem" }}></div>
+              <FormLabel>
+                <Tooltip triggerText="White balance">
+                  You can choose auto white balance or customise the temperature
+                  and tint, and lock to a grey reference card in 'custom' mode.
+                  If "Custom" is greyed out, choose another camera.
+                </Tooltip>
+              </FormLabel>
+              <div style={{ marginBottom: "0.5rem" }}></div>
+              <ContentSwitcher
+                selectedIndex={this.state.wb_isAuto ? 0 : 1}
+                onChange={({ name }) => {
+                  this.updateTempTint();
+                  if (name === "custom-white-balance-select") {
+                    this.setWbModeCustom();
+                  } else if (name === "auto-white-balance-select") {
+                    this.setWbModeAuto();
                   }
-                  onChange={({ value }) => {
-                    this.setTempTint(value, this.state.wb_currentTint);
-                  }}
+                }}
+              >
+                <Switch
+                  name="auto-white-balance-select"
+                  text="Auto white balance"
+                  disabled={!this.state.whiteBalance.supportsAuto}
                 />
-                <div style={{ marginBottom: "0.5rem" }}></div>
-                <Slider
-                  labelText="White balance tint"
-                  value={this.state.wb_currentTint}
-                  min={this.state.whiteBalance.minTint}
-                  max={this.state.whiteBalance.maxTint}
-                  step={1}
-                  stepMultiplier={10}
+                <Switch
+                  name="custom-white-balance-select"
+                  text="Custom"
                   disabled={
-                    this.state.wb_isAuto ||
-                    !this.state.whiteBalance.supportsCustomGain
+                    !this.state.whiteBalance.supportsCustomGain ||
+                    !this.state.whiteBalance.supportsGrey
                   }
-                  onChange={({ value }) => {
-                    this.setTempTint(this.state.wb_currentTemp, value);
-                  }}
                 />
-                <div style={{ marginBottom: "0.5rem" }}></div>
-                <Button
-                  disabled={
-                    !this.state.whiteBalance.supportsGrey ||
-                    this.state.wb_isAuto
-                  }
-                  onClick={() => {
-                    this.setWbLockGrey();
-                  }}
-                >
-                  Lock grey
-                </Button>
-                <div style={{ marginBottom: "1rem" }}></div>
-                <FormLabel>
-                  <Tooltip triggerText="Interactive focus">
-                    You can choose auto white balance or customise the
-                    temperature and tint in 'locked' mode.
-                  </Tooltip>
-                </FormLabel>
-                <ContentSwitcher onChange={console.log} disabled>
-                  <Switch name="auto-focus-select" text="Auto focus" disabled />
-                  <Switch
-                    name="locked-focus-select"
-                    text="Locked focus"
-                    disabled
-                  />
-                </ContentSwitcher>
+              </ContentSwitcher>
+              <div style={{ marginBottom: "0.5rem" }}></div>
+              <Slider
+                labelText="White balance temperature"
+                value={this.state.wb_currentTemp}
+                min={this.state.whiteBalance.minTemp}
+                max={this.state.whiteBalance.maxTemp}
+                step={1}
+                stepMultiplier={10}
+                disabled={
+                  this.state.wb_isAuto ||
+                  !this.state.whiteBalance.supportsCustomGain
+                }
+                onChange={({ value }) => {
+                  this.setTempTint(value, this.state.wb_currentTint);
+                }}
+              />
+              <div style={{ marginBottom: "0.5rem" }}></div>
+              <Slider
+                labelText="White balance tint"
+                value={this.state.wb_currentTint}
+                min={this.state.whiteBalance.minTint}
+                max={this.state.whiteBalance.maxTint}
+                step={1}
+                stepMultiplier={10}
+                disabled={
+                  this.state.wb_isAuto ||
+                  !this.state.whiteBalance.supportsCustomGain
+                }
+                onChange={({ value }) => {
+                  this.setTempTint(this.state.wb_currentTemp, value);
+                }}
+              />
+              <div style={{ marginBottom: "0.5rem" }}></div>
+              <Button
+                disabled={
+                  !this.state.whiteBalance.supportsGrey || this.state.wb_isAuto
+                }
+                onClick={() => {
+                  this.setWbLockGrey();
+                }}
+              >
+                Lock grey
+              </Button>
+              <div style={{ marginBottom: "1rem" }}></div>
+              <FormLabel>
+                <Tooltip triggerText="If point-of-interest focus and exposure are supported. You can click on the preview to highlight the point of interest.">
+                  If they are not supported, choose another camera.
+                </Tooltip>
+              </FormLabel>
+              <p>
+                Point of interest highlight is{" "}
+                {this.state.poiHighlightSupported
+                  ? "supported"
+                  : "not supported"}
+              </p>
             </Column>
             <Column md={3} lg={7}>
               <h4 style={{ marginBottom: "0.5rem" }}>Preview</h4>
-              <WebcamCapture/>
+              <WebcamCapture />
             </Column>
           </Row>
         </Grid>
