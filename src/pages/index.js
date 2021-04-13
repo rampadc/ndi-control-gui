@@ -4,7 +4,6 @@ import {
   Button,
   Column,
   ContentSwitcher,
-  Form,
   FormGroup,
   FormLabel,
   Grid,
@@ -15,6 +14,9 @@ import {
   Slider,
   Switch,
   Toggle,
+  TextInput,
+  Modal,
+  InlineNotification
 } from "carbon-components-react";
 import "../styles/override.scss";
 
@@ -39,8 +41,8 @@ import {
   stopNDI,
   getNDIStatus,
 } from "../utils/camera-service";
-// import Webcam from "react-webcam";
 import WebcamCapture from "../components/webcam-capture";
+import {Connect16} from '@carbon/icons-react';
 
 // markup
 class IndexPage extends React.Component {
@@ -62,10 +64,13 @@ class IndexPage extends React.Component {
     cameraName: "",
     isNDISending: false,
     waitingForNdiStateChange: false,
-    poiHighlightSupported: false
+    poiHighlightSupported: false,
+    serverUrl: '',
+    showErrorCameraServer: false,
+    showErrorInvalidCameraServerUrl: false
   };
 
-  async componentDidMount() {
+  async prepareUI() {
     let hasNdiStarted = await getNDIStatus();
     this.setState({
       isNDISending: hasNdiStarted
@@ -117,6 +122,12 @@ class IndexPage extends React.Component {
     });
   }
 
+  async componentDidMount() {
+    if (this.state.serverUrl.length === 0) {
+      return;
+    }
+  }
+
   async updateTempTint() {
     let wbTempTint = await getTempTint();
     this.setState({
@@ -150,111 +161,197 @@ class IndexPage extends React.Component {
     }
   }
 
+  async connectToCameraServer() {
+    // disable the connect and close button, add loading animation
+
+    // connect to server
+
+    // check if this is a valid server by querying an endpoint
+
+    // if yes, end loading animation, load the url into camera-service and prepareUI()
+
+    // if no, end loading animation, tell user it's doesn't look like the app is running or on the same network
+  }
+
   render() {
     return (
       <Layout activeCamera={this.state.cameraName}>
+        <Modal
+          open={this.state.serverUrl.trim().length === 0}
+          modalHeading="Add a camera server"
+          modalLabel="Camera server"
+          primaryButtonText="Connect"
+          onRequestClose={() => {
+            if (this.state.serverUrl.trim().length === 0) {
+              // show inline error that the user needs to have a camera server to use this
+              this.setState({ showErrorCameraServer: true });
+            } else {
+              this.setState({ showErrorCameraServer: false });
+            }
+          }}
+          onRequestSubmit={() => {
+            this.connectToCameraServer();
+          }}
+        >
+          <p style={{ marginBottom: "1rem" }}>
+            This URL will be shown everytime your app launches in the bottom
+            left corner. Please include the 'http://'.
+          </p>
+          <TextInput
+            data-modal-primary-focus
+            id="serverUrlInput"
+            labelText="Server URL"
+            placeholder="e.g. http://iPhone.local, http://192.168.1.2"
+            style={{ marginBottom: "1rem" }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                let value = document.getElementById('serverUrlInput').value;
+                if (value.trim().length === 0) {
+                  this.setState({
+                    showErrorCameraServer: true
+                  });
+                  return;
+                } else {
+                  this.setState({
+                    showErrorCameraServer: false
+                  });
+                }
+                if (value.match(/^http[s]?:\/\/[\.0-9a-zA-Z]+:?[0-9]*\/?$/) == null) {
+                  this.setState({
+                    showErrorInvalidCameraServerUrl: true
+                  });
+                } else {
+                  this.setState({
+                    showErrorInvalidCameraServerUrl: false
+                  });
+                  this.connectToCameraServer();
+                }
+              }
+            }}
+          />
+          <div hidden={!this.state.showErrorCameraServer}>
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle="A camera server URL must be provided to use the controls"
+            />
+          </div>
+          <div hidden={!this.state.showErrorInvalidCameraServerUrl}>
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle="Invalid web server URL detected. The expected RegEx pattern is /^http[s]?:\/\/[\.0-9a-zA-Z]+:?[0-9]*\/?$/"
+            />
+          </div>
+        </Modal>
         <Grid narrow style={{ marginLeft: "unset" }}>
           <Row>
             <Column md={2} lg={4}>
-              <Form>
-                <h4 style={{ marginBottom: "0.5rem" }}>NDI Configuration</h4>
-                <FormGroup legendText="Shows configurations for NDI stream and recording">
-                  <ContentSwitcher onChange={() => {}} disabled>
-                    <Switch name="toggle-stream" text="Stream only" disabled />
-                    <Switch
-                      name="toggle-stream-record"
-                      text="Stream & Record"
-                      disabled
-                    />
-                  </ContentSwitcher>
-                  <div style={{ marginBottom: "0.5rem" }}></div>
-                  <Select
-                    defaultValue="hd1920x1080"
-                    id="ndi-quality-select"
-                    labelText="Stream quality"
-                    disabled
-                  >
-                    <SelectItem
-                      value="qHD960x540"
-                      text="qHD 960x540"
-                    ></SelectItem>
-                    <SelectItem
-                      value="hd1280x720"
-                      text="HD 1280x720"
-                    ></SelectItem>
-                    <SelectItem
-                      value="hd1920x1080"
-                      text="HD 1920x1080"
-                    ></SelectItem>
-                    <SelectItem
-                      value="hd4K3840x2160"
-                      text="4K 3840x2160"
-                    ></SelectItem>
-                  </Select>
-                  <div style={{ marginBottom: "0.5rem" }}></div>
-                  <Toggle
-                    labelText="Stream audio"
-                    defaultToggled
-                    id="ndi-audio-toggle"
-                    disabled
-                  />
-                  <div style={{ marginBottom: "1rem" }}></div>
-                  <Select
-                    defaultValue="hd1920x1080"
-                    id="record-quality-select"
-                    labelText="Record quality"
-                    disabled
-                  >
-                    <SelectItem
-                      value="qHD960x540"
-                      text="qHD 960x540"
-                    ></SelectItem>
-                    <SelectItem
-                      value="hd1280x720"
-                      text="HD 1280x720"
-                    ></SelectItem>
-                    <SelectItem
-                      value="hd1920x1080"
-                      text="HD 1920x1080"
-                    ></SelectItem>
-                    <SelectItem
-                      value="hd4K3840x2160"
-                      text="4K 3840x2160"
-                    ></SelectItem>
-                  </Select>
-                  <div style={{ marginBottom: "0.5rem" }}></div>
-                  <Toggle
-                    labelText="Record audio"
-                    defaultToggled
-                    id="record-audio-toggle"
-                    disabled
-                  />
-                </FormGroup>
+              <h4 style={{ marginBottom: "0.5rem" }}>NDI Configuration</h4>
+              <FormGroup legendText="Shows configurations for NDI stream and recording">
                 <Button
-                  onClick={async () => {
-                    this.setState({ waitingForNdiStateChange: true });
-                    if (this.state.isNDISending) {
-                      await stopNDI();
-                      this.setState({ isNDISending: false });
-                    } else {
-                      await startNDI();
-                      this.setState({ isNDISending: true });
-                    }
-                    this.setState({ waitingForNdiStateChange: false });
-                  }}
-                  kind={this.state.isNDISending ? "danger" : "primary"}
-                  disabled={this.state.waitingForNdiStateChange}
+                  size="sm"
+                  renderIcon={Connect16}
+                  iconDescription="Icon Description"
                 >
-                  <Loading
-                    description="Configuring NDI"
-                    withOverlay={false}
-                    small={true}
-                    hidden={!this.state.waitingForNdiStateChange}
-                    style={{ marginRight: "1rem" }}
-                  />
-                  {this.state.isNDISending ? "Stop" : "Start"}
+                  Connect to camera server
                 </Button>
-              </Form>
+                <div style={{ margin: "1rem" }}></div>
+                <ContentSwitcher onChange={() => {}} disabled>
+                  <Switch name="toggle-stream" text="Stream only" disabled />
+                  <Switch
+                    name="toggle-stream-record"
+                    text="Stream & Record"
+                    disabled
+                  />
+                </ContentSwitcher>
+                <div style={{ marginBottom: "0.5rem" }}></div>
+                <Select
+                  defaultValue="hd1920x1080"
+                  id="ndi-quality-select"
+                  labelText="Stream quality"
+                  disabled
+                >
+                  <SelectItem
+                    value="qHD960x540"
+                    text="qHD 960x540"
+                  ></SelectItem>
+                  <SelectItem
+                    value="hd1280x720"
+                    text="HD 1280x720"
+                  ></SelectItem>
+                  <SelectItem
+                    value="hd1920x1080"
+                    text="HD 1920x1080"
+                  ></SelectItem>
+                  <SelectItem
+                    value="hd4K3840x2160"
+                    text="4K 3840x2160"
+                  ></SelectItem>
+                </Select>
+                <div style={{ marginBottom: "0.5rem" }}></div>
+                <Toggle
+                  labelText="Stream audio"
+                  defaultToggled
+                  id="ndi-audio-toggle"
+                  disabled
+                />
+                <div style={{ marginBottom: "1rem" }}></div>
+                <Select
+                  defaultValue="hd1920x1080"
+                  id="record-quality-select"
+                  labelText="Record quality"
+                  disabled
+                >
+                  <SelectItem
+                    value="qHD960x540"
+                    text="qHD 960x540"
+                  ></SelectItem>
+                  <SelectItem
+                    value="hd1280x720"
+                    text="HD 1280x720"
+                  ></SelectItem>
+                  <SelectItem
+                    value="hd1920x1080"
+                    text="HD 1920x1080"
+                  ></SelectItem>
+                  <SelectItem
+                    value="hd4K3840x2160"
+                    text="4K 3840x2160"
+                  ></SelectItem>
+                </Select>
+                <div style={{ marginBottom: "0.5rem" }}></div>
+                <Toggle
+                  labelText="Record audio"
+                  defaultToggled
+                  id="record-audio-toggle"
+                  disabled
+                />
+              </FormGroup>
+              <Button
+                onClick={async () => {
+                  this.setState({ waitingForNdiStateChange: true });
+                  if (this.state.isNDISending) {
+                    await stopNDI();
+                    this.setState({ isNDISending: false });
+                  } else {
+                    await startNDI();
+                    this.setState({ isNDISending: true });
+                  }
+                  this.setState({ waitingForNdiStateChange: false });
+                }}
+                kind={this.state.isNDISending ? "danger" : "primary"}
+                disabled={this.state.waitingForNdiStateChange}
+              >
+                <Loading
+                  description="Configuring NDI"
+                  withOverlay={false}
+                  small={true}
+                  hidden={!this.state.waitingForNdiStateChange}
+                  style={{ marginRight: "1rem" }}
+                />
+                {this.state.isNDISending ? "Stop" : "Start"}
+              </Button>
             </Column>
             <Column md={3} lg={5}>
               <h4 style={{ marginBottom: "0.5rem" }}>Camera Control</h4>
