@@ -72,7 +72,8 @@ class IndexPage extends React.Component {
     showErrorInvalidFormatCameraServerUrl: false,
     isConnectingToCameraServerUrl: false,
     showErrorInvalidCameraServerUrl: false,
-    modalRequested: false
+    modalRequested: false,
+    modalClosable: false
   };
 
   async prepareUI() {
@@ -128,7 +129,11 @@ class IndexPage extends React.Component {
   }
 
   async componentDidMount() {
-    if (this.state.serverUrl.length === 0) {
+    // Get server url from local storage
+    const localServerUrl = JSON.parse(localStorage.getItem('serverUrl'));
+    if (localServerUrl) {
+      this.setServerUrl(localServerUrl.serverUrl);
+    } else {
       return;
     }
   }
@@ -166,6 +171,20 @@ class IndexPage extends React.Component {
     }
   }
 
+  setServerUrl(url) {
+    localStorage.setItem('serverUrl', JSON.stringify({
+      serverUrl: url
+    }));
+    this.setState({
+      serverUrl: url,
+      modalRequested: false,
+      modalClosable: true
+    }, () => {
+      setBaseUrl(url);
+      this.prepareUI();
+    });
+  }
+
   async connectToCameraServer(url) {
     // disable the connect and close button, add loading animation
     this.setState({
@@ -190,13 +209,7 @@ class IndexPage extends React.Component {
       if (connectButton != null) {
         connectButton.disabled = false;
       }
-      this.setState({
-        serverUrl: url,
-        modalRequested: false
-      }, () => {
-        setBaseUrl(url);
-        this.prepareUI();
-      });
+      this.setServerUrl(url);
     } catch (error) {
       if (error) {
         // if no, end loading animation, tell user it's doesn't look like the app is running or on the same network
@@ -241,7 +254,7 @@ class IndexPage extends React.Component {
     return (
       <Layout activeCamera={this.state.cameraName}>
         <Modal
-          open={this.state.serverUrl.trim().length === 0 || this.state.modalRequested}
+          open={this.state.serverUrl.trim().length === 0 || this.state.modalRequested || !this.state.modalClosable}
           modalHeading="Add a camera server"
           modalLabel="Camera server"
           primaryButtonText="Connect"
@@ -250,7 +263,10 @@ class IndexPage extends React.Component {
               // show inline error that the user needs to have a camera server to use this
               this.setState({ showErrorCameraServer: true });
             } else {
-              this.setState({ showErrorCameraServer: false });
+              this.setState({ 
+                showErrorCameraServer: false,
+                modalRequested: false
+              });
             }
           }}
           onRequestSubmit={() => {

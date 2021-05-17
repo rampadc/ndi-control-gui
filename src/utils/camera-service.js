@@ -18,7 +18,7 @@ function handleErrors(response) {
 
 export async function testUrl(url) {
     try {
-        let response = await fetch(`${url}/cameras/active`);
+        await fetch(`${url}/cameras/active`);
         return true;
     } catch(error) {
         throw new Error('Cannot get active cameras')
