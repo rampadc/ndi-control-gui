@@ -67,6 +67,8 @@ class IndexPage extends React.Component {
     poiHighlightSupported: false,
     serverUrl: '',
     showErrorCameraServer: false,
+    showErrorInvalidFormatCameraServerUrl: false,
+    isConnectingToCameraServerUrl: false,
     showErrorInvalidCameraServerUrl: false
   };
 
@@ -161,16 +163,73 @@ class IndexPage extends React.Component {
     }
   }
 
-  async connectToCameraServer() {
+  async connectToCameraServer(url) {
     // disable the connect and close button, add loading animation
+    this.setState({
+      isConnectingToCameraServerUrl: true
+    });
+    
+    let connectButton = document.querySelectorAll('.bx--modal-footer .bx--btn')[0];
+    if (connectButton != null) {
+      // disable it for now
+      connectButton.disabled = true;
+    }
 
     // connect to server
-
     // check if this is a valid server by querying an endpoint
+    try {
+      let _ = await getActiveCamera();
+      
+      // if yes, end loading animation, load the url into camera-service and prepareUI()
+      this.setState({
+        isConnectingToCameraServerUrl: false
+      });
+      if (connectButton != null) {
+        connectButton.disabled = false;
+      }
+      this.setState({
+        serverUrl: url
+      }, () => {
+        this.prepareUI();
+      });
+    } catch (error) {
+      if (error) {
+        // if no, end loading animation, tell user it's doesn't look like the app is running or on the same network
+        this.setState({
+          showErrorInvalidCameraServerUrl: true,
+          isConnectingToCameraServerUrl: false
+        });
+        if (connectButton != null) {
+          connectButton.disabled = false;
+        }
+      }
+    }    
+  }
 
-    // if yes, end loading animation, load the url into camera-service and prepareUI()
+  checkCameraServerUrl() {
+    let value = document.getElementById('serverUrlInput').value;
+    if (value.trim().length === 0) {
+      this.setState({
+        showErrorCameraServer: true
+      });
+      return;
+    }
 
-    // if no, end loading animation, tell user it's doesn't look like the app is running or on the same network
+    if (value.trim().length !== 0) {
+      this.setState({
+        showErrorCameraServer: false
+      });
+    }
+    if (value.match(/^http[s]?:\/\/[\.0-9a-zA-Z]+:?[0-9]*\/?$/) == null) {
+      this.setState({
+        showErrorInvalidFormatCameraServerUrl: true
+      });
+    } else {
+      this.setState({
+        showErrorInvalidFormatCameraServerUrl: false
+      });
+      this.connectToCameraServer(value);
+    }
   }
 
   render() {
@@ -190,7 +249,7 @@ class IndexPage extends React.Component {
             }
           }}
           onRequestSubmit={() => {
-            this.connectToCameraServer();
+            this.checkCameraServerUrl();
           }}
         >
           <p style={{ marginBottom: "1rem" }}>
@@ -205,27 +264,7 @@ class IndexPage extends React.Component {
             style={{ marginBottom: "1rem" }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                let value = document.getElementById('serverUrlInput').value;
-                if (value.trim().length === 0) {
-                  this.setState({
-                    showErrorCameraServer: true
-                  });
-                  return;
-                } else {
-                  this.setState({
-                    showErrorCameraServer: false
-                  });
-                }
-                if (value.match(/^http[s]?:\/\/[\.0-9a-zA-Z]+:?[0-9]*\/?$/) == null) {
-                  this.setState({
-                    showErrorInvalidCameraServerUrl: true
-                  });
-                } else {
-                  this.setState({
-                    showErrorInvalidCameraServerUrl: false
-                  });
-                  this.connectToCameraServer();
-                }
+                this.checkCameraServerUrl();
               }
             }}
           />
@@ -236,11 +275,25 @@ class IndexPage extends React.Component {
               subtitle="A camera server URL must be provided to use the controls"
             />
           </div>
-          <div hidden={!this.state.showErrorInvalidCameraServerUrl}>
+          <div hidden={!this.state.showErrorInvalidFormatCameraServerUrl}>
             <InlineNotification
               kind="error"
               title="Error"
               subtitle="Invalid web server URL detected. The expected RegEx pattern is /^http[s]?:\/\/[\.0-9a-zA-Z]+:?[0-9]*\/?$/"
+            />
+          </div>
+          <div hidden={!this.state.showErrorInvalidCameraServerUrl}>
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle="Cannot find a valid NDI camera server at the URL provided. Make sure the this browser is running on the same network as the NDI camera."
+            />
+          </div>
+          <div hidden={!this.state.isConnectingToCameraServerUrl}>
+            <Loading
+              description="Connecting..."
+              withOverlay={false}
+              small={true}
             />
           </div>
         </Modal>
