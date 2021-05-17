@@ -40,6 +40,8 @@ import {
   startNDI,
   stopNDI,
   getNDIStatus,
+  testUrl,
+  setBaseUrl,
 } from "../utils/camera-service";
 import WebcamCapture from "../components/webcam-capture";
 import {Connect16} from '@carbon/icons-react';
@@ -69,7 +71,8 @@ class IndexPage extends React.Component {
     showErrorCameraServer: false,
     showErrorInvalidFormatCameraServerUrl: false,
     isConnectingToCameraServerUrl: false,
-    showErrorInvalidCameraServerUrl: false
+    showErrorInvalidCameraServerUrl: false,
+    modalRequested: false
   };
 
   async prepareUI() {
@@ -178,7 +181,7 @@ class IndexPage extends React.Component {
     // connect to server
     // check if this is a valid server by querying an endpoint
     try {
-      let _ = await getActiveCamera();
+      let _ = await testUrl(url);
       
       // if yes, end loading animation, load the url into camera-service and prepareUI()
       this.setState({
@@ -188,8 +191,10 @@ class IndexPage extends React.Component {
         connectButton.disabled = false;
       }
       this.setState({
-        serverUrl: url
+        serverUrl: url,
+        modalRequested: false
       }, () => {
+        setBaseUrl(url);
         this.prepareUI();
       });
     } catch (error) {
@@ -236,7 +241,7 @@ class IndexPage extends React.Component {
     return (
       <Layout activeCamera={this.state.cameraName}>
         <Modal
-          open={this.state.serverUrl.trim().length === 0}
+          open={this.state.serverUrl.trim().length === 0 || this.state.modalRequested}
           modalHeading="Add a camera server"
           modalLabel="Camera server"
           primaryButtonText="Connect"
@@ -260,7 +265,7 @@ class IndexPage extends React.Component {
             data-modal-primary-focus
             id="serverUrlInput"
             labelText="Server URL"
-            placeholder="e.g. http://iPhone.local, http://192.168.1.2"
+            placeholder={`e.g. http://iPhone.local, http://192.168.1.2${this.state.serverUrl.trim.length > 0 ? `, ${this.state.serverUrl}` : ''}`}
             style={{ marginBottom: "1rem" }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -306,6 +311,11 @@ class IndexPage extends React.Component {
                   size="sm"
                   renderIcon={Connect16}
                   iconDescription="Icon Description"
+                  onClick = { () => {
+                    this.setState({
+                      modalRequested: true
+                    })
+                  }}
                 >
                   Connect to camera server
                 </Button>

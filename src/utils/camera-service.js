@@ -1,6 +1,6 @@
 import fetch from 'isomorphic-fetch';
 
-const baseUrl = 'http://192.168.1.154';
+var baseUrl = '';
 
 function handleErrors(response) {
     if (response.status === 400) {
@@ -13,6 +13,15 @@ function handleErrors(response) {
         throw new Error("503 Service Unavailable");
     } else {
         throw new Error(`Unexpected HTTP status code ${response.status}`);
+    }
+}
+
+export async function testUrl(url) {
+    try {
+        let response = await fetch(`${url}/cameras/active`);
+        return true;
+    } catch(error) {
+        throw new Error('Cannot get active cameras')
     }
 }
 
@@ -243,4 +252,8 @@ export async function highlight(x, y) {
     } catch(error) {
         console.error(error);
     }   
+}
+
+export async function setBaseUrl(url) {
+    baseUrl = url;
 }
